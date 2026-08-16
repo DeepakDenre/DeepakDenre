@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DeepakBot — Secure Channel</title>
+<style>
+  :root{
+    --bg:#100E1A;
+    --panel:#1B1830;
+    --panel-2:#232040;
+    --border:#332C56;
+    --violet:#8B5CF6;
+    --violet-dim:#5B3FA8;
+    --coral:#FF7F50;
+    --text:#EDEAF7;
+    --muted:#8C84AD;
+    --mono: ui-monospace, "SF Mono", "Cascadia Code", "Roboto Mono", Consolas, monospace;
+    --sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, Roboto, sans-serif;
+  }
+  *{box-sizing:border-box;}
+  html,body{height:100%;}
+  body{
+    margin:0;
+    background:
+      radial-gradient(circle at 20% -10%, rgba(139,92,246,0.16), transparent 45%),
+      radial-gradient(circle at 100% 110%, rgba(255,127,80,0.10), transparent 40%),
+      var(--bg);
+    color:var(--text);
+    font-family:var(--sans);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    padding:24px;
+  }
+
+  .frame{
+    width:100%;
+    max-width:560px;
+    height:min(720px, 92vh);
+    background:var(--panel);
+    border:1px solid var(--border);
+    border-radius:16px;
+    display:flex;
+    flex-direction:column;
+    overflow:hidden;
+    box-shadow:0 30px 80px -20px rgba(0,0,0,0.6);
+  }
+
+  /* --- Titlebar --- */
+  .titlebar{
+    display:flex;
+    align-items:center;
+    gap:10px;
+    padding:14px 16px;
+    border-bottom:1px solid var(--border);
+    background:var(--panel-2);
+    font-family:var(--mono);
+    font-size:12.5px;
+    color:var(--muted);
+  }
+  .dots{display:flex; gap:6px;}
+  .dot{width:10px;height:10px;border-radius:50%;}
+  .dot.r{background:#FF5F57;} .dot.y{background:#FEBC2E;} .dot.g{background:#28C840;}
+  .titlebar .path{flex:1; text-align:center;}
+  .lock{color:var(--violet); font-size:13px;}
+
+  /* --- Boot / handshake screen --- */
+  .boot{
+    flex:1;
+    display:flex;
+    flex-direction:column;
+    justify-content:center;
+    padding:28px 26px;
+    font-family:var(--mono);
+    font-size:13px;
+    line-height:1.9;
+    color:var(--muted);
+  }
+  .boot .line{opacity:0; animation:reveal 0.25s forwards;}
+  .boot .ok{color:#4ADE80;}
+  .boot .accent{color:var(--violet);}
+  .boot .cursor{
+    display:inline-block; width:7px; height:14px; background:var(--violet);
+    margin-left:4px; vertical-align:-2px;
+    animation:blink 1s steps(1) infinite;
+  }
+  @keyframes reveal{to{opacity:1;}}
+  @keyframes blink{50%{opacity:0;}}
+  .boot.hidden{display:none;}
+
+  /* --- Chat --- */
+  .chat-wrap{flex:1; display:flex; flex-direction:column; min-height:0;}
+  .chat-wrap.hidden{display:none;}
+
+  .bot-id{
+    display:flex; align-items:center; gap:12px;
+    padding:16px;
+    border-bottom:1px solid var(--border);
+  }
+  .avatar{
+    width:38px;height:38px;border-radius:10px;
+    background:linear-gradient(135deg,var(--violet),var(--coral));
+    display:flex;align-items:center;justify-content:center;
+    font-family:var(--mono); font-weight:700; font-size:14px; color:#fff;
+  }
+  .bot-id .name{font-weight:600; font-size:14.5px;}
+  .bot-id .status{font-family:var(--mono); font-size:11px; color:#4ADE80; display:flex; align-items:center; gap:6px;}
+  .pulse{width:6px;height:6px;border-radius:50%;background:#4ADE80; box-shadow:0 0 0 rgba(74,222,128,0.5); animation:pulse 2s infinite;}
+  @keyframes pulse{
+    0%{box-shadow:0 0 0 0 rgba(74,222,128,0.5);}
+    70%{box-shadow:0 0 0 6px rgba(74,222,128,0);}
+    100%{box-shadow:0 0 0 0 rgba(74,222,128,0);}
+  }
+
+  .messages{
+    flex:1; overflow-y:auto; padding:16px;
+    display:flex; flex-direction:column; gap:10px;
+  }
+  .messages::-webkit-scrollbar{width:6px;}
+  .messages::-webkit-scrollbar-thumb{background:var(--border); border-radius:3px;}
+
+  .msg{max-width:82%; padding:10px 13px; border-radius:14px; font-size:13.5px; line-height:1.5; animation:rise 0.25s ease;}
+  @keyframes rise{from{opacity:0; transform:translateY(6px);} to{opacity:1; transform:translateY(0);}}
+  .msg.bot{
+    align-self:flex-start;
+    background:var(--panel-2);
+    border:1px solid var(--border);
+    border-bottom-left-radius:4px;
+  }
+  .msg.user{
+    align-self:flex-end;
+    background:linear-gradient(135deg, var(--violet-dim), var(--violet));
+    border-bottom-right-radius:4px;
+    color:#fff;
+  }
+  .msg code{
+    font-family:var(--mono); font-size:12px;
+    background:rgba(0,0,0,0.25); padding:1px 5px; border-radius:4px;
+  }
+  .typing{align-self:flex-start; display:flex; gap:4px; padding:12px 14px; background:var(--panel-2); border:1px solid var(--border); border-radius:14px; border-bottom-left-radius:4px;}
+  .typing span{width:6px;height:6px;border-radius:50%; background:var(--muted); animation:bounce 1.2s infinite;}
+  .typing span:nth-child(2){animation-delay:0.15s;} .typing span:nth-child(3){animation-delay:0.3s;}
+  @keyframes bounce{0%,60%,100%{transform:translateY(0); opacity:0.4;} 30%{transform:translateY(-4px); opacity:1;}}
+
+  .chips{display:flex; gap:8px; padding:10px 16px; flex-wrap:wrap; border-top:1px solid var(--border);}
+  .chip{
+    font-size:12px; padding:6px 11px; border-radius:999px;
+    background:var(--panel-2); border:1px solid var(--border); color:var(--muted);
+    cursor:pointer; transition:all 0.15s;
+  }
+  .chip:hover{border-color:var(--violet); color:var(--text);}
+
+  .input-row{display:flex; gap:8px; padding:14px 16px; border-top:1px solid var(--border);}
+  .input-row input{
+    flex:1; background:var(--panel-2); border:1px solid var(--border); color:var(--text);
+    border-radius:10px; padding:11px 13px; font-size:13.5px; font-family:var(--sans);
+    outline:none;
+  }
+  .input-row input:focus{border-color:var(--violet);}
+  .input-row button{
+    background:var(--violet); color:#fff; border:none; border-radius:10px;
+    padding:0 16px; font-weight:600; font-size:13px; cursor:pointer;
+  }
+  .input-row button:hover{background:#7C4CE0;}
+
+  .footer-note{
+    text-align:center; font-family:var(--mono); font-size:10.5px; color:var(--muted);
+    padding:8px; border-top:1px solid var(--border);
+  }
+  .footer-note a{color:var(--violet); text-decoration:none;}
+</style>
+</head>
+<body>
+
+<div class="frame">
+  <div class="titlebar">
+    <div class="dots"><span class="dot r"></span><span class="dot y"></span><span class="dot g"></span></div>
+    <div class="path"><span class="lock">🔒</span> deepakdenre.tech/chat</div>
+  </div>
+
+  <div class="boot" id="boot"></div>
+
+  <div class="chat-wrap hidden" id="chatWrap">
+    <div class="bot-id">
+      <div class="avatar">DB</div>
+      <div style="flex:1">
+        <div class="name">DeepakBot</div>
+        <div class="status"><span class="pulse"></span> secure channel established</div>
+      </div>
+    </div>
+
+    <div class="messages" id="messages"></div>
+
+    <div class="chips" id="chips"></div>
+
+    <div class="input-row">
+      <input id="userInput" type="text" placeholder="Ask about my stack, projects, or how to reach me…" autocomplete="off"/>
+      <button id="sendBtn">Send</button>
+    </div>
+
+    <div class="footer-note">Rule-based demo bot · built by Deepak Denre · <a href="https://deepakdenre.tech" target="_blank">deepakdenre.tech</a></div>
+  </div>
+</div>
+
+<script>
+  // ---------- Boot / handshake sequence ----------
+  const bootLines = [
+    { t: 'client_hello → 3ds2rupay.local:443', cls:'' },
+    { t: 'negotiating cipher suite <span class="accent">TLS_AES_256_GCM_SHA384</span>', cls:'' },
+    { t: 'verifying peer certificate ... <span class="ok">OK</span>', cls:'' },
+    { t: 'mutual auth handshake ... <span class="ok">OK</span>', cls:'' },
+    { t: 'spinning up <span class="accent">DeepakBot</span> instance', cls:'' },
+    { t: 'channel secured. loading chat<span class="cursor"></span>', cls:'' },
+  ];
+  const bootEl = document.getElementById('boot');
+  let bi = 0;
+  function nextBootLine(){
+    if(bi < bootLines.length){
+      const div = document.createElement('div');
+      div.className = 'line';
+      div.innerHTML = (bi===0? '<span class="accent">$</span> ' : '') + bootLines[bi].t;
+      bootEl.appendChild(div);
+      bi++;
+      setTimeout(nextBootLine, 380);
+    } else {
+      setTimeout(()=>{
+        document.getElementById('boot').classList.add('hidden');
+        document.getElementById('chatWrap').classList.remove('hidden');
+        pushBot("Hey, I'm DeepakBot 👋 — a small rule-based assistant standing in for Deepak. Ask me about his stack, current projects, or how to get in touch.");
+        renderChips();
+      }, 500);
+    }
+  }
+  nextBootLine();
+
+  // ---------- Chat logic ----------
+  const messagesEl = document.getElementById('messages');
+  const inputEl = document.getElementById('userInput');
+  const chipsEl = document.getElementById('chips');
+
+  const knowledge = [
+    { keys:['stack','tech','technology','skills','language'],
+      a:"Deepak works mainly in <code>Java</code> + <code>Spring Boot</code> on the backend and <code>React</code> on the frontend, with <code>MySQL</code>/<code>MongoDB</code> for data. Day-to-day that's banking-grade reconciliation and settlement systems." },
+    { keys:['job','work','company','role','c-edge','cedge'],
+      a:"He's a Full Stack Developer at <code>C-Edge Technologies</code> — a TCS–SBI joint venture — building ATM/POS/UPI/IMPS reconciliation, NPCI settlement processing, and the SecureNxt ACS EMV 3DS platform." },
+    { keys:['project','projects','build','building'],
+      a:"Recent work spans an ATM 5-Way Reconciliation system, an NPCI raw file downloader, the SecureNxt ACS 3DS platform, and — outside work — a Library Management System (React 19 + Django REST + MySQL) for his MCA coursework." },
+    { keys:['study','education','mca','university','college'],
+      a:"He's pursuing an <code>MCA at University of Mumbai</code> (2024–2026) alongside his full-time role." },
+    { keys:['home lab','homelab','raspberry','pi','self host','selfhost','server'],
+      a:"His home lab runs on Raspberry Pi hardware — self-hosted Pi-hole, Jellyfin, and Plex — plus experiments running local LLMs (GGUF models) via Ollama." },
+    { keys:['game','gaming','bgmi','cod','emulat'],
+      a:"For fun: BGMI, CoD Mobile, and tinkering with PC-game emulation on Android hardware." },
+    { keys:['anime'],
+      a:"Yes, anime is very much on the after-hours list." },
+    { keys:['contact','reach','email','hire','linkedin','connect'],
+      a:"Best place to connect is <a href='https://www.linkedin.com/in/deepakdenre' target='_blank' style='color:var(--violet)'>LinkedIn</a>, or through <a href='https://deepakdenre.tech' target='_blank' style='color:var(--violet)'>deepakdenre.tech</a>." },
+    { keys:['security','3ds','mtls','npci','tls','certificate'],
+      a:"Currently deep in an mTLS integration with NPCI's 3DS2 service through an Apache reverse proxy — the boot sequence you just saw was a nod to exactly that kind of handshake debugging." },
+    { keys:['award','achievement','star performer'],
+      a:"He was named Star Performer of the Quarter for Q3 FY 2025–26 at C-Edge." },
+  ];
+
+  function findAnswer(text){
+    const q = text.toLowerCase();
+    for(const item of knowledge){
+      if(item.keys.some(k=>q.includes(k))) return item.a;
+    }
+    return "I'm just a small rule-based demo, so I don't have an answer for that one — try asking about his stack, projects, home lab, or how to get in touch.";
+  }
+
+  function pushMsg(text, who){
+    const div = document.createElement('div');
+    div.className = 'msg ' + who;
+    div.innerHTML = text;
+    messagesEl.appendChild(div);
+    messagesEl.scrollTop = messagesEl.scrollHeight;
+  }
+  function pushBot(text){
+    const typing = document.createElement('div');
+    typing.className = 'typing';
+    typing.innerHTML = '<span></span><span></span><span></span>';
+    messagesEl.appendChild(typing);
+    messagesEl.scrollTop = messagesEl.scrollHeight;
+    const delay = 500 + Math.min(text.length * 8, 900);
+    setTimeout(()=>{
+      typing.remove();
+      pushMsg(text, 'bot');
+    }, delay);
+  }
+
+  function handleSend(text){
+    if(!text.trim()) return;
+    pushMsg(text, 'user');
+    inputEl.value = '';
+    pushBot(findAnswer(text));
+  }
+
+  document.getElementById('sendBtn').addEventListener('click', ()=>handleSend(inputEl.value));
+  inputEl.addEventListener('keydown', (e)=>{ if(e.key==='Enter') handleSend(inputEl.value); });
+
+  const suggestions = ["What's your stack?", "What do you work on?", "Tell me about your home lab", "How can I reach you?"];
+  function renderChips(){
+    chipsEl.innerHTML = '';
+    suggestions.forEach(s=>{
+      const c = document.createElement('div');
+      c.className = 'chip';
+      c.textContent = s;
+      c.onclick = ()=>handleSend(s);
+      chipsEl.appendChild(c);
+    });
+  }
+</script>
+</body>
+</html>
